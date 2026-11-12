@@ -29,7 +29,6 @@ def load_model():
 
 model = load_model()
 
-# Initialize Hugging Face Inference Client using Streamlit secrets
 @st.cache_resource
 def get_hf_client():
     token = st.secrets.get("HF_TOKEN", os.environ.get("HF_TOKEN"))
@@ -40,7 +39,7 @@ client = get_hf_client()
 st.set_page_config(page_title="CIAT25 Visual Consistency Engine (API)", layout="wide")
 
 st.title("⚡ CIAT25.1: Automated Visual Engine")
-st.markdown("*Gate 0 Perimeter Ingress & Official HF Client Execution*")
+st.markdown("*Gate 0 Perimeter Ingress & Free-Tier Serverless Execution*")
 
 # Sidebar: Manage Style Anchor & Dynamic Thresholds
 with st.sidebar:
@@ -71,18 +70,18 @@ if st.button("Realign, Synthesize & Generate via API"):
     if not raw_prompt.strip():
         st.warning("Please enter a prompt first.")
     else:
-        with st.spinner("Evaluating semantic drift and querying cloud inference client..."):
+        with st.spinner("Evaluating semantic drift and weaving prose payload..."):
             anchor_embedding = model.encode(anchor_data["core_aesthetic"], convert_to_tensor=True)
             prompt_embedding = model.encode(raw_prompt, convert_to_tensor=True)
             
             similarity_score = util.cos_sim(prompt_embedding, anchor_embedding).item()
             
+            # PROSE WEAVING: Integrates anchor parameters directly into the narrative syntax
             clean_subject = raw_prompt.strip().rstrip('.')
             fused_prompt_string = (
-                f"{clean_subject} | "
-                f"Style Integration: ({anchor_data['core_aesthetic']}:1.3) | "
-                f"Color Grading: ({anchor_data['color_palette']}:1.2) | "
-                f"Render Engine: High-end production render, 8k resolution, volumetric lighting."
+                f"{clean_subject}, built with {anchor_data['core_aesthetic']}, "
+                f"graded in {anchor_data['color_palette']}, "
+                f"high-end production render, volumetric lighting, 8k resolution."
             )
             
             # Machine Audit Payload
@@ -109,12 +108,13 @@ if st.button("Realign, Synthesize & Generate via API"):
             st.subheader("🚀 Cloud API Generation Output")
             
             try:
-                # Execute generation using the official client (avoids deprecated endpoint URLs)
+                # Using a model endpoint that supports free serverless inference on Hugging Face
                 image = client.text_to_image(
                     prompt=fused_prompt_string,
-                    model="black-forest-labs/FLUX.1-schnell"
+                    negative_prompt=anchor_data['negative_constraints'],
+                    model="stabilityai/stable-diffusion-2-1"
                 )
-                st.image(image, caption="Generated via Hugging Face Inference Client", use_column_width=True)
+                st.image(image, caption="Generated via Free-Tier Serverless API", use_column_width=True)
             except Exception as e:
                 st.error(f"Inference Engine Error: {str(e)}")
             
