@@ -1,8 +1,8 @@
 import json
 import os
-import requests
 import streamlit as st
 from sentence_transformers import SentenceTransformer, util
+from huggingface_hub import InferenceClient
 
 ST_CONFIG_FILE = "style_anchor.json"
 
@@ -29,18 +29,18 @@ def load_model():
 
 model = load_model()
 
-# Hugging Face Serverless API Configuration
-API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
-headers = {"Authorization": f"Bearer {st.secrets['HF_TOKEN']}"}
+# Initialize Hugging Face Inference Client using Streamlit secrets
+@st.cache_resource
+def get_hf_client():
+    token = st.secrets.get("HF_TOKEN", os.environ.get("HF_TOKEN"))
+    return InferenceClient(api_key=token)
 
-def query_api(payload):
-    response = requests.post(API_URL, headers=headers, json=payload)
-    return response.content
+client = get_hf_client()
 
 st.set_page_config(page_title="CIAT25 Visual Consistency Engine (API)", layout="wide")
 
 st.title("⚡ CIAT25.1: Automated Visual Engine")
-st.markdown("*Gate 0 Perimeter Ingress & Direct API Execution*")
+st.markdown("*Gate 0 Perimeter Ingress & Official HF Client Execution*")
 
 # Sidebar: Manage Style Anchor & Dynamic Thresholds
 with st.sidebar:
@@ -71,7 +71,7 @@ if st.button("Realign, Synthesize & Generate via API"):
     if not raw_prompt.strip():
         st.warning("Please enter a prompt first.")
     else:
-        with st.spinner("Evaluating semantic drift and querying cloud inference API..."):
+        with st.spinner("Evaluating semantic drift and querying cloud inference client..."):
             anchor_embedding = model.encode(anchor_data["core_aesthetic"], convert_to_tensor=True)
             prompt_embedding = model.encode(raw_prompt, convert_to_tensor=True)
             
@@ -108,13 +108,15 @@ if st.button("Realign, Synthesize & Generate via API"):
             st.markdown("---")
             st.subheader("🚀 Cloud API Generation Output")
             
-            # Execute automated API call and render image directly
-            image_bytes = query_api({"inputs": fused_prompt_string})
-            
-            if b"error" in image_bytes:
-                st.error(f"API Error: {image_bytes.decode('utf-8')}")
-            else:
-                st.image(image_bytes, caption="Generated via Hugging Face Inference API", use_column_width=True)
+            try:
+                # Execute generation using the official client (avoids deprecated endpoint URLs)
+                image = client.text_to_image(
+                    prompt=fused_prompt_string,
+                    model="black-forest-labs/FLUX.1-schnell"
+                )
+                st.image(image, caption="Generated via Hugging Face Inference Client", use_column_width=True)
+            except Exception as e:
+                st.error(f"Inference Engine Error: {str(e)}")
             
             st.subheader("📋 Machine Audit JSON Payload")
             st.code(json.dumps(structured_payload, indent=4), language="json")
